@@ -46,8 +46,11 @@ std::string get_etapa(int n){
 
 //FUNÇÃO que exibe a imagem
 void exibir(std::string nome_etapa){
+    if(imagem_em_processo.empty()){
+       imagem_em_processo = original.clone();
+    }
     Mat amostra = imagem_em_processo.clone();
-    putText(amostra, nome_etapa, Point(5, 25), FONT_HERSHEY_COMPLEX_SMALL, 1, CV_RGB(255, 0, 255), 2);
+    putText(amostra, nome_etapa, Point(5, 25), FONT_HERSHEY_COMPLEX_SMALL, 1, CV_RGB(255, 90, 255), 2);
     imshow("Imagem", amostra);
 };
 
@@ -58,24 +61,53 @@ Mat equalizaIntensidade()
         cvtColor(original, ycrcb, CV_BGR2YCrCb); //converte de bgr para ycrcb
         vector<Mat> canais;
         split(ycrcb, canais); //separa os canais no vetor
-        equalizeHist(canais[0], canais[0]); //equaliza o histograma de cada canal
+        equalizeHist(canais[0], canais[0]); //equaliza o histograma do canal de luminância
         Mat resultado;
         merge(canais, ycrcb); //Junta os canais equalizados na imagem ycrcb
         cvtColor(ycrcb, resultado, CV_YCrCb2BGR); //passa o resultado para rgb
-
+//  *      resultado = original.clone();
         return resultado;
 
 }
 
 //FUNÇÃO que muda o sistema de cor de RGB para YCbCr
 Mat novo_sistema_de_cor() {
-
     imagem_em_processo = equalizaIntensidade();
     Mat resultado;
     cvtColor(imagem_em_processo,resultado,CV_BGR2YCrCb);
     return resultado;
 }
 
+//FUNÇÃO que separa os tons de pele do resto da imagem
+Mat detecar_pele(){
+    imagem_em_processo = novo_sistema_de_cor();
+    Mat resultado;
+    Mat binbin;
+    inRange(imagem_em_processo,Scalar(0,133,77),Scalar(235,173,127),binbin);
+    bitwise_and(imagem_em_processo,imagem_em_processo,resultado,binbin);
+    return resultado;
+}
+
+//FUNÇÃO que segmenta com o threshold OSU (baseado em variancia)
+Mat segmentar(){
+    imagem_em_processo = detecar_pele();
+    Mat resultado;
+    Mat blur;
+    GaussianBlur(imagem_em_processo,blur,Size(5,5),0);
+    threshold(blur,blur,THRESH_BINARY,255,0);
+    threshold(blur,resultado,THRESH_OTSU,255,0);
+    return resultado;
+}
+
+//FUNÇÃO que agrupa os pixels em elementos distintos
+Mat agrupar(){
+    imagem_em_processo = segmentar();
+    Mat resultado;
+
+    return resultado;
+}
+
+//FUNÇÃO que mapeia a entrada da trackbar para a função referente do processo da detecção
 void funcSlider_etapas(int, void *){
     string nome_etapa = get_etapa(etapa);
     cout << "Etapa: " << etapa << " - " << nome_etapa << std::endl;
@@ -90,8 +122,10 @@ void funcSlider_etapas(int, void *){
             imagem_em_processo = novo_sistema_de_cor();
             break;
         case 3://detecção de tons de pele
+            imagem_em_processo = detecar_pele();
             break;
         case 4://segmentação baseada em variância
+            imagem_em_processo = segmentar();
             break;
         case 5://compomentes conexos e agrupamento
             break;
@@ -107,8 +141,10 @@ void funcSlider_etapas(int, void *){
 }
 
 int main(){
+    original = imread("imagensTeste/Imagens/humans2.jpg");
     namedWindow("Imagem",WINDOW_NORMAL);
     createTrackbar("Etapa: ", "Imagem", &etapa, 8, funcSlider_etapas);
+    exibir(get_etapa(0));
     /* Mostra a etapa do algoritmo de reconhecimento
      * Etapas:
      * 1. Imagem Original
@@ -121,8 +157,9 @@ int main(){
      * 8. Detecção de Limites da Face
      * 9. Verificando/Pesando Triângulos de Olhos e Boca
      */
-    original = imread("imagensTeste/Imagens/human2.jpg");
-    imshow("Imagem", original);
+
+
+
 
     while(1){ //loop principal
         char c = waitKey(1);
@@ -130,6 +167,7 @@ int main(){
             break;
         }
     }
+
     destroyAllWindows();
     return 0;
 }
