@@ -179,7 +179,7 @@ int main(){
 
 
 
-    while(1){ //loop principal
+    while(1){ //loop até fechar o programa
         char c = waitKey(1);
         if( c == 'q' || c=='Q'){
             break;
