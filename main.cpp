@@ -102,7 +102,24 @@ Mat segmentar(){
 //FUNÇÃO que agrupa os pixels em elementos distintos
 Mat agrupar(){
     imagem_em_processo = segmentar();
-    Mat resultado;
+    vector<Mat> canais;
+    split(imagem_em_processo,canais);
+    imagem_em_processo = canais[0];
+    Mat imagem_rotulada(imagem_em_processo.size(), CV_32S);
+    int nRotulos = connectedComponents(imagem_em_processo, imagem_rotulada, 8);
+    std::vector<Vec3b> colors(nRotulos);
+    colors[0] = Vec3b(0, 0, 0);//background
+    for(int rotulo = 1; rotulo < nRotulos; ++rotulo){
+        colors[rotulo] = Vec3b((rand() & 255), (rand() & 255), (rand() & 255) );
+    }
+    Mat resultado(imagem_em_processo.size(), CV_8UC3);
+    for(int r = 0; r < resultado.rows; ++r){
+        for(int c = 0; c < resultado.cols; ++c){
+            int rotulo = imagem_rotulada.at<int>(r, c);
+            Vec3b &pixel = resultado.at<Vec3b>(r, c);
+            pixel = colors[rotulo];
+        }
+    }
 
     return resultado;
 }
@@ -128,6 +145,7 @@ void funcSlider_etapas(int, void *){
             imagem_em_processo = segmentar();
             break;
         case 5://compomentes conexos e agrupamento
+            imagem_em_processo = agrupar();
             break;
         case 6://detecção de olhos e boca
             break;
