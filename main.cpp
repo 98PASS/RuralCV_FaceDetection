@@ -5,6 +5,8 @@ using namespace std;
 
 Mat original;
 Mat imagem_em_processo;
+vector<Rect> areas_de_interesse; //vetor de retangulos que guarda áreas de interesse da imagem lida
+
 int etapa=0;
 
 Mat novo_sistema_de_cor(Mat mat);
@@ -103,14 +105,14 @@ Mat segmentar(){
 Mat agrupar(){
     imagem_em_processo = segmentar();
     vector<Mat> canais;
-    split(imagem_em_processo,canais);
-    imagem_em_processo = canais[0];
-    Mat imagem_rotulada(imagem_em_processo.size(), CV_32S);
+    split(imagem_em_processo,canais);//separa em canais
+    Mat imagem_em_processo = canais[0]; //pega apenas o primeiro canal
+    Mat imagem_rotulada(imagem_em_processo.size(), CV_32S); //cria matriz do tamanho da imagem em processo
     int nRotulos = connectedComponents(imagem_em_processo, imagem_rotulada, 8);
     std::vector<Vec3b> colors(nRotulos);
-    colors[0] = Vec3b(0, 0, 0);//background
+    colors[0] = Vec3b(0, 0, 0);//background em preto
     for(int rotulo = 1; rotulo < nRotulos; ++rotulo){
-        colors[rotulo] = Vec3b((rand() & 255), (rand() & 255), (rand() & 255) );
+        colors[rotulo] = Vec3b((rand() & 255), (rand() & 255), (rand() & 255) ); // cada componente recebe uma cor rgb randomica
     }
     Mat resultado(imagem_em_processo.size(), CV_8UC3);
     for(int r = 0; r < resultado.rows; ++r){
@@ -121,7 +123,24 @@ Mat agrupar(){
         }
     }
 
+
+    Mat componente; //imagem com um único componente
+    vector<vector<Point>> contours;
+
+    for(int i=1;i<colors.size();i++){ //Loop que cria retangulos em torno dos objetos da imagem
+
+       inRange(resultado, colors[i], colors[i], componente);
+       areas_de_interesse.insert(areas_de_interesse.end(),boundingRect(componente));
+       rectangle(resultado,areas_de_interesse[i-1],Scalar(255-colors[i][0],255-colors[i][1],255-colors[i][2]),4);
+
+    }
+
     return resultado;
+}
+
+//FUNÇÃO que seleciona o maior grupo de pixels
+Mat contornos(){
+    return original;
 }
 
 //FUNÇÃO que mapeia a entrada da trackbar para a função referente do processo da detecção
@@ -148,6 +167,7 @@ void funcSlider_etapas(int, void *){
             imagem_em_processo = agrupar();
             break;
         case 6://detecção de olhos e boca
+            imagem_em_processo = contornos();
             break;
         case 7://detecção de limites da face
             break;
