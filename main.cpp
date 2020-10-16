@@ -67,7 +67,7 @@ Mat equalizaIntensidade()
         Mat resultado;
         merge(canais, ycrcb); //Junta os canais equalizados na imagem ycrcb
         cvtColor(ycrcb, resultado, CV_YCrCb2BGR); //passa o resultado para rgb
-//  *      resultado = original.clone();
+
         return resultado;
 
 }
@@ -132,7 +132,7 @@ Mat candidatos_de_face(){
        inRange(resultado, colors[i], colors[i], componente);
        Rect retangulito =  boundingRect(componente);
        //condicional do retangulo
-       if(retangulito.height > 13 && retangulito.width > 13 && retangulito.size().area() <= (original.size().area()*0.75)){
+       if(retangulito.height > 13 && retangulito.width > 13 /*&& retangulito.size().area() <= (original.size().area()*0.75)*/){
            areas_de_interesse.insert(areas_de_interesse.end(),retangulito);
            rectangle(resultado,retangulito,Scalar(0,255,0),4);
        }
@@ -148,27 +148,53 @@ Mat olhos_e_boca(){
     Mat mapaCrominancia_olhos; //Mapa de olhos da crominancia
     Mat mapaLuminancia_olhos; //Mapa de olhos da luminancia
 
-    split(original, dimensoes);//separo a imagem original em canais diferentes
-    imshow("Y",dimensoes[0]);
-    imshow("Cr",dimensoes[1]);
-    imshow("Cb",dimensoes[2]);
-    norma
-
-    mapaCrominancia_olhos = 1/3*(  );
+    split(equalizaIntensidade(), dimensoes);//separo a imagem original em canais diferentes
 
 
+    //Normalizações e operações
+    Mat Y,Cb,Cr;
+    Y = dimensoes[0];
+    Cr = dimensoes[1];
+    Cb = dimensoes[2];
+    normalize(Cr, Cr,  0, 1, NORM_MINMAX, CV_32F);
+    normalize(Cb, Cb,  0, 1, NORM_MINMAX, CV_32F);
 
+//  Componentes da fórmula de mapa de olhos de crominancia
+    Mat notCr2 = 255 - Cr;
+    notCr2 = notCr2.mul(notCr2); // = not Cr²
+    Mat Cb2 = Cb.mul(Cb); // Cb²
+    Mat  divCbCr = Cb / Cr;
+    //
+    normalize(Cb2, Cb2,  0, 1, NORM_MINMAX, CV_32F);
+    normalize(notCr2, notCr2, 0, 1, NORM_MINMAX, CV_32F);
+    normalize(divCbCr, divCbCr, 0, 1, NORM_MINMAX, CV_32F);
+
+    mapaCrominancia_olhos = (Cb2 + notCr2 + divCbCr) / 3; // fórmula aplicada
+
+//
+
+//    imshow("mapa",mapaCrominancia_olhos);
+//    imshow("notCr2",notCr2);
+//    imshow("Cb2", Cb2);
+//    imshow("divCbCr",divCbCr);
+//    imshow("Y",dimensoes[0]);
+//    imshow("Cr",dimensoes[1]);
+//    imshow("Cb",dimensoes[2]);
+
+//Preciso adicionar retangulos de interesse de olhos e boca à variável global
     return original;
 }
 
 //FUNÇÃO que destaca os limites da face na imagem original
 Mat limites_da_face(){
+    //esta função depende da função anterior
     imagem_em_processo = olhos_e_boca();
     Mat resultado = imagem_em_processo.clone();
     for (int i = 0; i < areas_de_interesse.size(); ++i) {
         rectangle(resultado,areas_de_interesse[i],Scalar(0,255,0),3);
     }
     return  resultado;
+    //preciso remover os triangulos que na parte de dentro não possuem os triangulos de interesse de olhos e boca
 }
 
 //FUNÇÃO callback que mapeia a entrada da trackbar para a função referente do processo da detecção
