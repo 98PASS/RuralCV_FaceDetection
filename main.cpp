@@ -234,7 +234,7 @@ void funcSlider_etapas(int, void *){
 }
 
 int main(){
-    original = imread("imagensTeste/Imagens/humans2.jpg");
+    original = imread("imagensTeste/Imagens/human5.jpg");
     namedWindow("Detecção Facial",WINDOW_NORMAL);
     createTrackbar("Etapa: ", "Detecção Facial", &etapa, 8, funcSlider_etapas);
     exibir(get_etapa(0));
