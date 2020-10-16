@@ -53,7 +53,7 @@ void exibir(std::string nome_etapa){
     }
     Mat amostra = imagem_em_processo.clone();
     putText(amostra, nome_etapa, Point(5, 25), FONT_HERSHEY_COMPLEX_SMALL, 1, CV_RGB(255, 90, 255), 2);
-    imshow("Imagem", amostra);
+    imshow("Detecção Facial", amostra);
 };
 
 //FUNÇÃO que equaliza a intensidade luminosa
@@ -102,7 +102,7 @@ Mat segmentar(){
 }
 
 //FUNÇÃO que agrupa os pixels em elementos distintos
-Mat agrupar(){
+Mat candidatos_de_face(){
     imagem_em_processo = segmentar();
     vector<Mat> canais;
     split(imagem_em_processo,canais);//separa em canais
@@ -127,23 +127,51 @@ Mat agrupar(){
     Mat componente; //imagem com um único componente
     vector<vector<Point>> contours;
 
-    for(int i=1;i<colors.size();i++){ //Loop que cria retangulos em torno dos objetos da imagem
+    for(int i=1;i<colors.size();i++){ //Loop que cria retangulos em torno dos objetos de interesse da imagem
 
        inRange(resultado, colors[i], colors[i], componente);
-       areas_de_interesse.insert(areas_de_interesse.end(),boundingRect(componente));
-       rectangle(resultado,areas_de_interesse[i-1],Scalar(255-colors[i][0],255-colors[i][1],255-colors[i][2]),4);
-
+       Rect retangulito =  boundingRect(componente);
+       //condicional do retangulo
+       if(retangulito.height > 13 && retangulito.width > 13 && retangulito.size().area() <= (original.size().area()*0.75)){
+           areas_de_interesse.insert(areas_de_interesse.end(),retangulito);
+           rectangle(resultado,retangulito,Scalar(0,255,0),4);
+       }
     }
 
     return resultado;
 }
 
 //FUNÇÃO que seleciona o maior grupo de pixels
-Mat contornos(){
+Mat olhos_e_boca(){
+    Mat resultado;
+    vector<Mat> dimensoes;
+    Mat mapaCrominancia_olhos; //Mapa de olhos da crominancia
+    Mat mapaLuminancia_olhos; //Mapa de olhos da luminancia
+
+    split(original, dimensoes);//separo a imagem original em canais diferentes
+    imshow("Y",dimensoes[0]);
+    imshow("Cr",dimensoes[1]);
+    imshow("Cb",dimensoes[2]);
+    norma
+
+    mapaCrominancia_olhos = 1/3*(  );
+
+
+
     return original;
 }
 
-//FUNÇÃO que mapeia a entrada da trackbar para a função referente do processo da detecção
+//FUNÇÃO que destaca os limites da face na imagem original
+Mat limites_da_face(){
+    imagem_em_processo = olhos_e_boca();
+    Mat resultado = imagem_em_processo.clone();
+    for (int i = 0; i < areas_de_interesse.size(); ++i) {
+        rectangle(resultado,areas_de_interesse[i],Scalar(0,255,0),3);
+    }
+    return  resultado;
+}
+
+//FUNÇÃO callback que mapeia a entrada da trackbar para a função referente do processo da detecção
 void funcSlider_etapas(int, void *){
     string nome_etapa = get_etapa(etapa);
     cout << "Etapa: " << etapa << " - " << nome_etapa << std::endl;
@@ -164,12 +192,13 @@ void funcSlider_etapas(int, void *){
             imagem_em_processo = segmentar();
             break;
         case 5://compomentes conexos e agrupamento
-            imagem_em_processo = agrupar();
+            imagem_em_processo = candidatos_de_face();
             break;
         case 6://detecção de olhos e boca
-            imagem_em_processo = contornos();
+            imagem_em_processo = olhos_e_boca();
             break;
         case 7://detecção de limites da face
+            imagem_em_processo = limites_da_face();
             break;
         case 8://verificando/pesando triangulacao olhos/boca
             break;
@@ -180,8 +209,8 @@ void funcSlider_etapas(int, void *){
 
 int main(){
     original = imread("imagensTeste/Imagens/humans2.jpg");
-    namedWindow("Imagem",WINDOW_NORMAL);
-    createTrackbar("Etapa: ", "Imagem", &etapa, 8, funcSlider_etapas);
+    namedWindow("Detecção Facial",WINDOW_NORMAL);
+    createTrackbar("Etapa: ", "Detecção Facial", &etapa, 8, funcSlider_etapas);
     exibir(get_etapa(0));
     /* Mostra a etapa do algoritmo de reconhecimento
      * Etapas:
@@ -195,8 +224,6 @@ int main(){
      * 8. Detecção de Limites da Face
      * 9. Verificando/Pesando Triângulos de Olhos e Boca
      */
-
-
 
 
     while(1){ //loop até fechar o programa
